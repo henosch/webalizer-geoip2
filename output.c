@@ -54,7 +54,7 @@
 #endif
 
 #ifdef USE_GEOIP
-#include <GeoIP.h>
+#include <maxminddb.h>
 #endif
 
 #include "webalizer.h"                        /* main header              */
@@ -1948,8 +1948,8 @@ void top_ctry_table()
 
 #ifdef USE_GEOIP
    extern int    geoip;
-   extern GeoIP  *geo_fp;
-   const  char   *geo_rc=NULL;
+   extern MMDB_s mmdb;
+   int gai_error, mmdb_error;
 #endif
    char          geo_ctry[3]="--";
 
@@ -1981,19 +1981,32 @@ void top_ctry_table()
                if (geoip)
                {
                   /* Lookup IP address here,  turn into idx  */
-                  geo_rc=GeoIP_country_code_by_addr(geo_fp, hptr->string);
-                  if (geo_rc==NULL||geo_rc[0]=='\0'||geo_rc[0]=='-')
+                  MMDB_lookup_result_s result = MMDB_lookup_string(&mmdb, hptr->string, &gai_error, &mmdb_error);
+                  if (gai_error == 0 && mmdb_error == MMDB_SUCCESS && result.found_entry)
                   {
-                     if (debug_mode)
-                        fprintf(stderr,"GeoIP: %s unknown (returns '%s')\n",
-                                hptr->string,(geo_rc==NULL)?"null":geo_rc);
+                     MMDB_entry_data_s entry_data;
+                     int status = MMDB_get_value(&result.entry, &entry_data, "country", "iso_code", NULL);
+                     if (status == MMDB_SUCCESS && entry_data.has_data &&
+                         entry_data.type == MMDB_DATA_TYPE_UTF8_STRING && entry_data.data_size >= 2)
+                     {
+                        char cc[3];
+                        cc[0] = tolower(entry_data.utf8_string[0]);
+                        cc[1] = tolower(entry_data.utf8_string[1]);
+                        cc[2] = '\0';
+                        geo_ctry[0]=cc[0]; geo_ctry[1]=cc[1];
+                        idx=ctry_idx(geo_ctry);
+                     }
+                     else
+                     {
+                        if (debug_mode)
+                           fprintf(stderr,"GeoIP: %s unknown (returns '%s')\n",
+                                   hptr->string, (entry_data.has_data)?"?":"null");
+                     }
                   }
                   else
                   {
-                     /* index returned geo_ctry */
-                     geo_ctry[0]=tolower(geo_rc[0]);
-                     geo_ctry[1]=tolower(geo_rc[1]);
-                     idx=ctry_idx(geo_ctry);
+                     if (debug_mode)
+                        fprintf(stderr,"GeoIP: %s unknown (not found)\n", hptr->string);
                   }
                }
 #endif /* USE_GEOIP */
