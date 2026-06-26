@@ -72,7 +72,7 @@
 #endif  /* USE_DNS */
 
 #ifdef USE_GEOIP
-#include <GeoIP.h>
+#include <maxminddb.h>
 #endif
 
 #ifdef USE_BZIP
@@ -172,7 +172,7 @@ char    *flag_dir    = "flags";               /* location of flag icons   */
 #ifdef USE_GEOIP
 int     geoip        = 0;                     /* Use GeoIP (0=no)         */
 char    *geoip_db    = NULL;                  /* GeoIP database filename  */
-GeoIP   *geo_fp      = NULL;                  /* GeoIP database handle    */
+MMDB_s  mmdb;                  /* GeoIP database handle    */
 #endif
 
 int     ntop_sites   = 30;                    /* top n sites to display   */
@@ -619,20 +619,18 @@ int main(int argc, char *argv[])
    if (geoip)
    {
       if (geoip_db!=NULL)
-         geo_fp=GeoIP_open(geoip_db, GEOIP_MEMORY_CACHE);
-      else
-         geo_fp=GeoIP_new(GEOIP_MEMORY_CACHE);
+      int status = MMDB_open((geoip_db!=NULL)?geoip_db:"/var/lib/GeoIP/GeoLite2-Country.mmdb", MMDB_MODE_MMAP, &mmdb);
 
       /* Did we open one? */
-      if (geo_fp==NULL)
+      if (status != MMDB_SUCCESS)
       {
          /* couldn't open.. warn user */
          if (verbose) printf("GeoIP %s\n",msg_geo_nolu);
          geoip=0;
       }
       else if (verbose>1) printf("%s %s (%s)\n",msg_geo_use,
-         GeoIPDBDescription[(int)geo_fp->databaseType],
-         (geoip_db==NULL)?msg_geo_dflt:geo_fp->file_path);
+         "GeoIP2 Country",
+         (geoip_db==NULL)?msg_geo_dflt:geoip_db);
    }
 #endif /* USE_GEOIP */
 
@@ -1487,7 +1485,7 @@ int main(int argc, char *argv[])
 
 #ifdef USE_GEOIP
       /* Close GeoIP database */
-      if (geo_fp) GeoIP_delete(geo_fp);
+      MMDB_close(&mmdb);
 #endif
 
       /* Whew, all done! Exit with completion status (0) */
@@ -1959,7 +1957,7 @@ void print_version()
    strncpy(&buf[strlen(buf)],"BZip2 ",7);
 #endif
 #ifdef USE_GEOIP
-   strncpy(&buf[strlen(buf)],"GeoIP ",7);
+   strncpy(&buf[strlen(buf)],"GeoIP2 ",8);
 #endif
 
    if (debug_mode)
