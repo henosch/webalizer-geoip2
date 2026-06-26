@@ -243,19 +243,19 @@ AC_ARG_WITH(geoiplib,
   S_GEOIPLIB="${withval}"; LDFLAGS="-L${withval} ${LDFLAGS}")
 
 if test "${USE_GEOIP}" = "yes"; then
-  AC_CHECK_LIB(GeoIP, main, USE_GEOIP="yes",
-    USE_GEOIP="no"; AC_MSG_WARN(libGeoIP not found.. GeoIP code will be disabled!))
+  AC_CHECK_LIB(maxminddb, main, USE_GEOIP="yes",
+    USE_GEOIP="no"; AC_MSG_WARN(libmaxminddb not found.. GeoIP code will be disabled!))
 fi
 
 if test "${USE_GEOIP}" = "yes"; then
-  AC_CHECK_HEADER(GeoIP.h, USE_GEOIP="yes",
-    USE_GEOIP="no"; AC_MSG_WARN(GeoIP.h not found.. GeoIP code will be disabled!))
+  AC_CHECK_HEADER(maxminddb.h, USE_GEOIP="yes",
+    USE_GEOIP="no"; AC_MSG_WARN(maxminddb.h not found.. GeoIP code will be disabled!))
 fi
 
 if test "${USE_GEOIP}" = "yes"; then
   dnl we have both library and header.. proceed
   OPTS="-DUSE_GEOIP ${OPTS}"
-  LIBS="-lGeoIP ${LIBS}"
+  LIBS="-lmaxminddb ${LIBS}"
 fi
 
 dnl ------------------------------------------
